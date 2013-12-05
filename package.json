@@ -1,0 +1,15 @@
+{
+  "name": "matterhorn-user-cassandra",
+  "version": "0.1.0",
+  "description": "User management for the matterhorn framework, with cassandra as the database.",
+  "author": "Liam Doherty",
+  "main": "user",
+  "dependencies": {
+    "underscorem": ">=0.1",
+    "matterhorn-standard": ">=0.1",
+    "bcrypt": ">=0.1.2",
+    "mailer": ">=0.1",
+    "quicklog": "*",
+    "node-cassandra-cql": "~0.2.8"
+  }
+}
