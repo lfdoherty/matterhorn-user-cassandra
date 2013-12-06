@@ -64,8 +64,8 @@ function makeAuthenticate(internal, prefix){
 		});
 	}
 }
-exports.makeClient = function(prefix, cb){
-	internalmaker.make(function(internal){
+exports.makeClient = function(hosts, prefix, cb){
+	internalmaker.make(hosts, function(internal){
 		_.assertDefined(internal)
 
 		var handle = {
@@ -116,11 +116,11 @@ exports.makeClient = function(prefix, cb){
 	})
 }
 
-exports.makeService = function(app, secureApp, host, secureHost, prefix, cb, userMadeCb){
+exports.makeService = function(hosts, app, secureApp, host, secureHost, prefix, cb, userMadeCb){
 	//_.assertLength(arguments, 6)
 	//_.assertObject(listeners)
 	
-	internalmaker.make(function(internal){
+	internalmaker.make(hosts, function(internal){
 		_.assertDefined(internal)
 
 		

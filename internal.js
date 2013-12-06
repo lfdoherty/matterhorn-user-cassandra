@@ -13,13 +13,13 @@ function hashPassword(password, salt){
 
 var log = require('quicklog').make('user-cassandra/internal')
 
-function make(cb){
+function make(hosts, cb){
 
-	//_.assertLength(arguments, 3);
+	_.assertLength(arguments, 2);
 	_.assertFunction(cb);
 
 	var Client = require('node-cassandra-cql').Client;
-	var hosts = ['127.0.0.1']
+	//var hosts = ['127.0.0.1']
 	var client = new Client({hosts: hosts, keyspace: 'matterhorn_user'});
 
 	client.on('log', function(level, message) {
