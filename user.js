@@ -116,16 +116,16 @@ exports.makeClient = function(hosts, prefix, cb){
 	})
 }
 
-exports.makeService = function(hosts, app, secureApp, host, secureHost, prefix, cb, userMadeCb){
+exports.makeService = function(config,/*hosts, app, secureApp, host, secureHost, prefix,*/ cb, userMadeCb){
 	//_.assertLength(arguments, 6)
 	//_.assertObject(listeners)
 	
-	internalmaker.make(hosts, function(internal){
+	internalmaker.make(config.hosts, function(internal){
 		_.assertDefined(internal)
 
 		
 		//var insecureAuthenticate = exports.insecure.load(app, secureHost, internal, makeAuthenticate(internal, prefix))
-		var secureAuthenticate = exports.secure.load(app, secureApp, host, secureHost, internal, prefix, userMadeCb)
+		var secureAuthenticate = exports.secure.load(config, internal,/*app, secureApp, host, secureHost, internal, prefix,*/ userMadeCb)
 		
 		cb()
 	

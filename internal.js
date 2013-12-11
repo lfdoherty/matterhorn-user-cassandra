@@ -125,8 +125,12 @@ function finishMake(c, cb){
 			
 			c.execute('SELECT email FROM users WHERE userId=? ALLOW FILTERING', [id], 1,function(err, result){
 				if(err) throw err
-				var email = result.rows[0][0]
-				cb(email)
+				if(result.rows.length === 0){
+					cb()
+				}else{
+					var email = result.rows[0][0]
+					cb(email)
+				}
 			})
 		},
 		setPassword: function(id, password, cb){

@@ -6,7 +6,7 @@ CREATE TABLE users (
 	createdTime timestamp,
 	passwordChangedTime timestamp,
 	hash text,
-	PRIMARY KEY (userId, email)
+	PRIMARY KEY (email, userId)
 );
 
 CREATE TABLE sessions (

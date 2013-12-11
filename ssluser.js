@@ -11,9 +11,9 @@ function setSessionCookie(res, session){
 	res.cookie('SID', session, {httpOnly: true, secure: true, maxAge: 24 * 60 * 60 * 1000});
 }
 
-exports.load = function(app, secureApp, host, secureHost, internal, prefix, userMadeCb){
+exports.load = function(config, internal,/*app, config.secureApp, host, secureHost, internal, prefix,*/ userMadeCb){
 	//_.assertLength(arguments, 6)
-	prefix = prefix||''
+	var prefix = config.prefix||''
 
 	function authenticateByToken(token, cb){
 		_.assertFunction(cb)
@@ -89,13 +89,18 @@ exports.load = function(app, secureApp, host, secureHost, internal, prefix, user
 			return
 		}
 
-		log('/ajax/signup request received .email: ' + data.email);
-
 		res.header('Cache-Control', 'no-cache, no-store')
+		
+		if(config.signupIntercepter && config.signupIntercepter(data.email, data.password, res)){
+			return
+		}
+
+		//log('/ajax/signup request received .email: ' + data.email);
+
 		
 		internal.findUser(data.email, function(userId){
 
-			log('/ajax/signup found user?: ' + userId);
+			//log('/ajax/signup found user?: ' + userId);
 			
 			if(userId !== undefined){
 				internal.authenticate(userId, data.password, function(ok){
@@ -110,7 +115,7 @@ exports.load = function(app, secureApp, host, secureHost, internal, prefix, user
 			}else{
 				internal.makeUser(data.email, data.password, function(userId){
 				
-					log('created user ' + userId + ' ' + data.email);
+					//log('created user ' + userId + ' ' + data.email);
 					
 					if(userMadeCb) userMadeCb(userId, data.email)
 
@@ -138,18 +143,22 @@ exports.load = function(app, secureApp, host, secureHost, internal, prefix, user
 		})
 	}
 
-	secureApp.post('/ajax/signup', signup);
+	config.secureApp.post('/ajax/signup', signup);
 
 	function login(req, res){
 
 		var data = req.body;
 
-		log('/ajax/login request received .email: ' + data.email);
+		//log('/ajax/login request received .email: ' + data.email);
 
 		res.header('Cache-Control', 'no-cache, no-store')
 
+		if(config.loginIntercepter && config.loginIntercepter(data.email, data.password, res)){
+			return
+		}
+
 		internal.findUser(data.email, function(userId){
-			log('found user: ' + userId);
+			//log('found user: ' + userId);
 			if(userId === undefined){
 				res.send({
 					error: 'authentication failed'
@@ -186,7 +195,7 @@ exports.load = function(app, secureApp, host, secureHost, internal, prefix, user
 		});
 	}
 
-	secureApp.post('/ajax/login', login);
+	config.secureApp.post('/ajax/login', login);
 
 	function logoutHandler(req, res){
 		
@@ -212,7 +221,7 @@ exports.load = function(app, secureApp, host, secureHost, internal, prefix, user
 			}
 		})
 	}
-	secureApp.get('/logout', logoutHandler)
+	config.secureApp.get('/logout', logoutHandler)
 	
 	function doLogout(req, res, cb){
 		var sid = req.cookies.SID;
@@ -233,7 +242,7 @@ exports.load = function(app, secureApp, host, secureHost, internal, prefix, user
 		}
 	}
 
-	secureApp.post('/ajax/logout', logout);
+	config.secureApp.post('/ajax/logout', logout);
 	function logout(req, res){
 	
 		res.header('Cache-Control', 'no-cache, no-store')
@@ -254,9 +263,9 @@ exports.load = function(app, secureApp, host, secureHost, internal, prefix, user
 			console.log('cbing: ' + req.query.next);
 			var url = prefix+'/ajax/login'
 			if(req.query.next) url += '?next='+req.query.next
-			cb({after: req.query.next, securePort: secureApp.port, PostUrl: url,
+			cb({after: req.query.next, securePort: config.secureApp.port, PostUrl: url,
 				SignupUrl: prefix+'/signup',
-				title: secureApp.loginTitle || 'Log In'
+				title: config.secureApp.loginTitle || 'Log In'
 			});
 		}
 	};	
@@ -266,16 +275,16 @@ exports.load = function(app, secureApp, host, secureHost, internal, prefix, user
 		cb: function(req, res, cb){
 			cb({securePort: res.app.getSecurePort(), 
 				PostUrl: prefix+'/ajax/signup',
-				title: secureApp.signupTitle || 'Sign Up'
+				title: config.secureApp.signupTitle || 'Sign Up'
 			})
 		}
 	};	
 
-	secureApp.post('/ajax/signup', signup);
-	secureApp.post('/ajax/login', login);
+	config.secureApp.post('/ajax/signup', signup);
+	config.secureApp.post('/ajax/login', login);
 
-	secureApp.page(exports, loginPage);
-	secureApp.page(exports, signupPage);
+	config.secureApp.page(exports, loginPage);
+	config.secureApp.page(exports, signupPage);
 	
 	return {
 		authenticate: authenticate,
