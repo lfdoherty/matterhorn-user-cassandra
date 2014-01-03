@@ -203,15 +203,18 @@ function finishMake(c, cb){
 		
 		makeSession: function(id, cb){
 			
-			var token = random.uid()
+			//console.log('making session, clearing old sessions...: ' + id)
+			//handle.clearAllUserSessions(id, function(){
 
-			c.execute('insert into sessions (userId, sessionToken) VALUES (?,?)', [id, token], 1, function(err, result){
-				if(err) throw err
+				var token = random.uid()
+				c.execute('insert into sessions (userId, sessionToken) VALUES (?,?)', [id, token], 1, function(err, result){
+					if(err) throw err
 				
-				if(cb){
-					cb(token)
-				}
-			})
+					if(cb){
+						cb(token)
+					}
+				})
+			//})
 			/*c.snap('singleUser', [id], function(err, suv){
 				if(err) throw err
 				//_.assert(suv.user.id() > 0)
@@ -266,7 +269,7 @@ function finishMake(c, cb){
 				}
 			})	*/		
 		},
-		clearSession: function(token, cb){
+		/*clearSession: function(token, cb){
 
 			//console.log('clearing user session: ' + token);
 			c.snap('singleSessionByToken', [token], function(err, sv){
@@ -286,6 +289,17 @@ function finishMake(c, cb){
 					if(cb) cb(false)
 				}
 			})
+		},*/
+		clearAllUserSessions: function(userId, cb){
+			c.execute('DELETE FROM sessions WHERE userId=?', [userId], 1, function(err, result){
+				if(err) throw err
+		
+				console.log('all sessions cleared')
+		
+				if(cb){
+					cb()
+				}
+			})
 		},
 		clearAllSessions: function(token, cb){
 
@@ -297,16 +311,7 @@ function finishMake(c, cb){
 					if(cb) cb()
 				}else{
 					var userId = result.rows[0][0]
-				
-					c.execute('DELETE FROM sessions WHERE userId=?', [userId], 1, function(err, result){
-						if(err) throw err
-				
-						console.log('all sessions cleared')
-				
-						if(cb){
-							cb()
-						}
-					})
+					handle.clearAllUserSessions(userId, cb)
 				}
 			})
 			//console.log('clearing user session---: ' + token);
