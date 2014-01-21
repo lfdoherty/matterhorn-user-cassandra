@@ -6,6 +6,7 @@ CREATE TABLE users (
 	createdTime timestamp,
 	passwordChangedTime timestamp,
 	hash text,
+	guest boolean,
 	PRIMARY KEY (email, userId)
 );
 

@@ -25,57 +25,39 @@ function make(hosts, cb){
 	client.on('log', function(level, message) {
 	  //console.log('log event: %s -- %j', level, message);
 	});
-	//minnowClient.snap('userGeneral', [], _.assureOnce(function(err, h){
-	//	if(err) throw err;
-		finishMake(client, cb)
-	//}))		
+
+	finishMake(client, cb)
 }
 
 function finishMake(c, cb){
 
-	//_.errout(typeof(listeners.logout))
-	//_.assertDefined(m)
-	
-	//var userMadeListeners = []
-	
 	var handle = {
 	
+		makeGuest: function(email, cb){
+			var now = Date.now()
+			
+			c.execute('insert into users (userId, createdTime, email, passwordChangedTime,guest) VALUES (now(),?,?,?,?)', [now, email, now,true], 1, function(err, result){
+				if(err) throw err
+				
+				handle.findUser(email, function(userId){
+					cb(userId)
+				})
+			})
+		},
 		makeUser: function(email, password, cb, viaWeb){
 
 			var salt = bcrypt.genSaltSync(10);
 			var hash = hashPassword(password, salt)
 			var now = Date.now()
 			
-			/*c.make('user', {
-				createdTime: now,
-				email: email,
-				passwordChangedTime: now,
-				hash: hash
-				//password: password
-			}, function(userId){
-				//console.log('make got userId: ' + userId + ' ' + userMadeListeners.length)
-				//_.assert(userId > 0)
-				var cdl = _.latch(userMadeListeners.length, function(){
-					cb(userId)
-				})
-				userMadeListeners.forEach(function(listener){
-					listener(userId, email, viaWeb, cdl)
-				})
-			})*/
-			
 			c.execute('insert into users (userId, createdTime, email, passwordChangedTime, hash) VALUES (now(),?,?,?,?)', [now, email, now, hash], 1, function(err, result){
 				if(err) throw err
 				
-				//console.log(JSON.stringify(result))
 				handle.findUser(email, function(userId){
 					cb(userId)
 				})
 			})
 		},
-		
-		/*onUserMade: function(cb){
-			userMadeListeners.push(cb)
-		},*/
 		
 		//note that 'authentication key' here refers to keys used for lost password retrieval, not sessions
 		//hence we only want 1 to exist at a time, and we need to be able to delete it once it has been used

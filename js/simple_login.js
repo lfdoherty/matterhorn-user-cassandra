@@ -1,11 +1,9 @@
-//require('matterhorn-standard/js/jquery')
-//require('./login')
 
 var page = require('fpage')
 
 var u = require('./utils')
 
-var pollsave = require('matterhorn-standard/js/pollsave')//.pollsave
+var pollsave = require('matterhorn-standard/js/pollsave')
 
 var script = '<div>'+
 	'<noscript><h1><font color="red">You must enable Javascript to use this website.<br/><br/><br/></font></h1></noscript>'+

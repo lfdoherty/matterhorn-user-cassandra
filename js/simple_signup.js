@@ -1,6 +1,5 @@
-//require('matterhorn-standard/js/jquery')
-//require('./signup')
-var pollsave = require('matterhorn-standard/js/pollsave')//.pollsave
+
+var pollsave = require('matterhorn-standard/js/pollsave')
 var u = require('./utils')
 
 var page = require('fpage')
@@ -17,43 +16,6 @@ var script = '<div>'+
 	'<div id="result"/>'+
 	'</div>';
 
-
-//jQuery(document).ready(function(){
 document.addEventListener('DOMContentLoaded', function(){
 	document.body.innerHTML = script
 })
-/*page.ready(function(){
-	page.setBodyHtml(script)
-
-	//jQuery("#submit").click(function(){
-	document.getElementById('submit').addEventListener('click', function(){
-		
-		var email = document.getElementById('email').value//jQuery("#email").val();
-		var password = document.getElementById('password').value//jQuery("#password").val();
-
-		var json = {email: email, password: password};
-
-		function ok(res){
-			
-			//console.log('got ok')
-			
-			//res = JSON.parse(res)
-			
-			u.makeCookie(res.token, res.userId);
-			
-			var next = u.getParameterByName('next');
-			if(!next){
-				next = '/';
-			}
-			document.location = next;
-		}
-
-		function fail(err){
-			//console.log('fail: ' + err)
-			alert('registration failure: ' + err.error);
-		}
-		//console.log('signing up')
-
-		pollsave(json, page.params.PostUrl, 200, ok, fail);
-	});
-});*/

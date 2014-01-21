@@ -7,6 +7,9 @@ var _ = require('underscorem')
 var log = require('quicklog').make('user-cassandra/secure')
 var sys = require('util')
 
+
+var random = require('seedrandom')
+
 function setSessionCookie(res, session){
 	res.cookie('SID', session, {httpOnly: true, secure: true, maxAge: 24 * 60 * 60 * 1000});
 }
@@ -73,6 +76,38 @@ exports.load = function(config, internal,/*app, config.secureApp, host, secureHo
 			}
 		});
 	}
+	
+	function makeGuest(req, res){
+
+		res.header('Cache-Control', 'no-cache, no-store')
+		
+		var guestId = random.uidBase64()
+		var email = 'guest_'+guestId
+			
+		internal.makeGuest(email, function(userId){
+		
+			if(userMadeCb) userMadeCb(userId, email)
+
+			var session = internal.makeSession(userId, function(token){
+				_.assertString(token)
+
+				res.header('Cache-Control', 'no-cache, no-store')
+				
+				setSessionCookie(res, token)
+				
+				if(req.url.indexOf('next=') === -1){
+					res.redirect('../../home/')
+				}else{
+					var i = req.url.indexOf('next=')
+					var part = req.url.substr(i+'next='.length)
+					res.redirect(part)
+				}
+				//
+			});
+		}, true);
+	}
+	
+	config.secureApp.get('/makeguest/', makeGuest);
 
 
 	//set up services for signup, login, logout, and lost password reset.
