@@ -13,20 +13,40 @@ function hashPassword(password, salt){
 
 var log = require('quicklog').make('user-cassandra/internal')
 
-function make(hosts, cb){
+function make(hosts, keyspace, cb){
 
-	_.assertLength(arguments, 2);
+	_.assertLength(arguments, 3);
+	_.assertString(keyspace)
 	_.assertFunction(cb);
 
 	var Client = require('node-cassandra-cql').Client;
 	//var hosts = ['127.0.0.1']
-	var client = new Client({hosts: hosts, keyspace: 'matterhorn_user'});
+	var client = new Client({hosts: hosts, keyspace: keyspace})//'matterhorn_user'});
+	
+	var cdl = _.latch(2, function(){
+		finishMake(client, cb)
+	})
+	
+	client.execute('CREATE TABLE users ('+
+		'userId timeuuid,'+
+		'email text,'+
+		'createdTime timestamp,'+
+		'passwordChangedTime timestamp,'+
+		'hash text,'+
+		'guest boolean,'+
+		'PRIMARY KEY (email, userId)'+
+	');', cdl)
+	
+	client.execute('CREATE TABLE sessions ('+
+		'userId timeuuid,'+
+		'sessionToken text,'+
+		'PRIMARY KEY (userId, sessionToken)'+
+	');', cdl)
 
 	client.on('log', function(level, message) {
 	  //console.log('log event: %s -- %j', level, message);
 	});
 
-	finishMake(client, cb)
 }
 
 function finishMake(c, cb){

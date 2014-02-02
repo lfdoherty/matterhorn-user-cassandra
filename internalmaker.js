@@ -9,10 +9,10 @@ exports.getUser = function(){
 	return user;
 }
 */
-exports.make = function(hosts, cb){
-	_.assertLength(arguments, 2)
+exports.make = function(hosts, keyspace, cb){
+	_.assertLength(arguments, 3)
 	
-	internal.make(hosts, function(ii){
+	internal.make(hosts, keyspace, function(ii){
 		_.assertFunction(ii.findUser)
 		//user = ii;
 		if(cb) cb(ii)
