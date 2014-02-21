@@ -23,7 +23,7 @@ function make(hosts, keyspace, cb){
 	//var hosts = ['127.0.0.1']
 	var client = new Client({hosts: hosts, keyspace: keyspace})//'matterhorn_user'});
 	
-	var cdl = _.latch(2, function(){
+	var cdl = _.latch(4, function(){
 		finishMake(client, cb)
 	})
 	
@@ -42,6 +42,9 @@ function make(hosts, keyspace, cb){
 		'sessionToken text,'+
 		'PRIMARY KEY (userId, sessionToken)'+
 	');', cdl)
+	
+	client.execute('create index session_tokens on sessions(sessiontoken);', cdl)
+	client.execute('create index user_ids on users(userId);', cdl)
 
 	client.on('log', function(level, message) {
 	  //console.log('log event: %s -- %j', level, message);
@@ -125,7 +128,7 @@ function finishMake(c, cb){
 			})*/
 			if(!id) throw new Error('id is not valid: ' + id)
 			
-			c.execute('SELECT email FROM users WHERE userId=? ALLOW FILTERING', [id], 1,function(err, result){
+			c.execute('SELECT email FROM users WHERE userId=?', [id], 1,function(err, result){
 				if(err) throw err
 				if(result.rows.length === 0){
 					cb()
@@ -135,9 +138,9 @@ function finishMake(c, cb){
 				}
 			})
 		},
-		setPassword: function(id, password, cb){
+		setPassword: function(id, email, password, cb){
 
-			var salt = bcrypt.genSaltSync(10);  
+			/*var salt = bcrypt.genSaltSync(10);  
 
 			c.snap('singleUser', [id], function(err, suv){
 				if(err) throw err
@@ -145,12 +148,25 @@ function finishMake(c, cb){
 				suv.user.passwordChangedTime.set(Date.now())
 				console.log('finished set password')
 				if(cb) cb()
+			})*/
+			var salt = bcrypt.genSaltSync(10);
+			var hash = hashPassword(password, salt)
+			var now = Date.now()
+			
+			//c.execute('insert into users (userId, createdTime, email, passwordChangedTime, hash) VALUES (now(),?,?,?,?)', [now, email, now, hash], 1, function(err, result){
+			c.execute('UPDATE users SET hash=?, passwordChangedTime=? WHERE email=? and userId=?', [hash, now, email, id], 1, function(err, result){
+				if(err) throw err
+				
+				/*handle.findUser(email, function(userId){
+					cb(userId)
+				})*/
+				if(cb) cb()
 			})			
 		},
 		authenticate: function(id, password, cb){
 
 			//_.assert(id > 0)
-			c.execute('SELECT hash FROM users WHERE userId=? ALLOW FILTERING', [id], 1,function(err, result){
+			c.execute('SELECT hash FROM users WHERE userId=?', [id], 1,function(err, result){
 				if(err) throw err
 
 				var hash = result.rows[0][0]
@@ -183,8 +199,10 @@ function finishMake(c, cb){
 		},
 		findUser: function(email, cb){
 
+			if(!email) throw new Error('email undefined')
+			
 			//c.snap('singleUserByEmail', [email], function(err, suv){
-			c.execute('SELECT userId FROM users WHERE email=? ALLOW FILTERING', [email], 1,function(err, result){
+			c.execute('SELECT userId FROM users WHERE email=?', [email], 1,function(err, result){
 				if(err) throw err
 				
 				if(result.rows.length > 0){
@@ -239,8 +257,7 @@ function finishMake(c, cb){
 			}
 			_.assertString(token);
 
-			//c.execute('insert into users (userId, createdTime, email, passwordChangedTime, hash) (now(),?,?,?)', [now, email, now, hash], function(err, result){
-			c.execute('SELECT userId FROM sessions WHERE sessionToken=? ALLOW FILTERING', [token], 1,function(err, result){
+			c.execute('SELECT userId FROM sessions WHERE sessionToken=?', [token], 1,function(err, result){
 				if(err) throw err
 				
 				if(result.rows.length > 0){
@@ -251,25 +268,6 @@ function finishMake(c, cb){
 					cb(false)
 				}
 			})
-			//console.log('checking for session with token: ' + token)
-			/*c.snap('singleSessionByToken', [token], function(err, suv){
-				if(err) throw err
-				try{
-					if(suv.has('session') && suv.session.has('user')){
-						//console.log('user id: ' + suv.session.user.id() + ' ' + JSON.stringify(suv.toJson()))
-						//_.assert(suv.session.user.id() > 0)
-						log('found session with token: ' + token)
-						cb(true, suv.session.user.id())
-					}else{
-						log('no session with token: ' + token)
-						cb(false)
-					}
-				}catch(e){
-					console.log(e)
-					cb(false)
-					handle.clearSession(token)
-				}
-			})	*/		
 		},
 		/*clearSession: function(token, cb){
 
@@ -305,7 +303,7 @@ function finishMake(c, cb){
 		},
 		clearAllSessions: function(token, cb){
 
-			c.execute('SELECT userId FROM sessions WHERE sessionToken=? ALLOW FILTERING', [token], 1,function(err, result){
+			c.execute('SELECT userId FROM sessions WHERE sessionToken=?', [token], 1,function(err, result){
 				if(err) throw err
 				
 				if(result.rows.length === 0){

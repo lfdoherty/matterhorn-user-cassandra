@@ -11,7 +11,7 @@ var script = '<div>'+
 	'<form action="'+page.params.PostUrl+'" method="post">'+
 	'Email: <input id="email" name="email" type="text"></input><br/><br/>'+
 	'Password: <input id="password" name="password" type="password" size="25"></input>' + 
-		'&nbsp;&nbsp;&nbsp;&nbsp;<a href="/lostpassword' + window.location.search + '">I Forgot My Password</a>' +
+		'&nbsp;&nbsp;&nbsp;&nbsp;<a href="'+page.params.urlPrefix+'/lostpassword/' + window.location.search + '">I Forgot My Password</a>' +
 	'<br/><br/>'+
 	'<input id="submit" type="submit" value="Submit"></input>'+
 	'<span style="padding-left:3em"><a id="signuplink" href="'+page.params.SignupUrl+'">Create New Account</a></span>'+
