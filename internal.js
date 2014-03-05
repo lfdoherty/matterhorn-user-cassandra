@@ -67,14 +67,17 @@ function finishMake(c, cb){
 				})
 			})
 		},
-		makeUser: function(email, password, cb, viaWeb){
+		makeUser: function(email, password, cb, errCb){
 
 			var salt = bcrypt.genSaltSync(10);
 			var hash = hashPassword(password, salt)
 			var now = Date.now()
 			
 			c.execute('insert into users (userId, createdTime, email, passwordChangedTime, hash) VALUES (now(),?,?,?,?)', [now, email, now, hash], 1, function(err, result){
-				if(err) throw err
+				if(err){
+					if(errCb) errCb(err)
+					else throw err
+				}
 				
 				handle.findUser(email, function(userId){
 					cb(userId)
