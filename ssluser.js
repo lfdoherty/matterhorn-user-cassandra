@@ -160,18 +160,18 @@ exports.load = function(config, internal,/*app, config.secureApp, host, secureHo
 						res.header('Cache-Control', 'no-cache, no-store')
 
 						setSessionCookie(res, token)
-						res.redirect('../../home/')
 						
-						/*var parsedUrl = urlModule.parse(req.url, true)
+						
+						var parsedUrl = urlModule.parse(req.url, true)
 						var next = parsedUrl.query.next
 			
 						if(next){
 							console.log('redirecting to: ' + next)
 							res.redirect(next)
 						}else{
-							console.log('straightforward msg: ' + req.url + ' ' + JSON.stringify(parsedUrl))
-							res.send('<html><body>You have been signed up and logged in.</body></html>');
-						}*/
+							console.log('just going home: ' + req.url)
+							res.redirect('../../home/')
+						}
 					});
 				}, true);
 			}
@@ -308,8 +308,10 @@ exports.load = function(config, internal,/*app, config.secureApp, host, secureHo
 		url: '/signup',
 		js: './js/simple_signup',
 		cb: function(req, res, cb){
+			var qi = req.url.indexOf('?')
+			var end = qi !== -1?req.url.substr(qi):''
 			cb({securePort: res.app.getSecurePort(), 
-				PostUrl: prefix+'/ajax/signup',
+				PostUrl: prefix+'/ajax/signup'+end,
 				title: config.secureApp.signupTitle || 'Sign Up'
 			})
 		}
