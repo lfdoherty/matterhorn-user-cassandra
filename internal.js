@@ -23,33 +23,34 @@ function make(hosts, keyspace, cb){
 	//var hosts = ['127.0.0.1']
 	var client = new Client({hosts: hosts, keyspace: keyspace})//'matterhorn_user'});
 	
-	var cdl = _.latch(4, function(){
-		finishMake(client, cb)
+	client.connect(function(){
+		var cdl = _.latch(4, function(){
+			finishMake(client, cb)
+		})
+	
+		client.execute('CREATE TABLE users ('+
+			'userId timeuuid,'+
+			'email text,'+
+			'createdTime timestamp,'+
+			'passwordChangedTime timestamp,'+
+			'hash text,'+
+			'guest boolean,'+
+			'PRIMARY KEY (email, userId)'+
+		');', cdl)
+	
+		client.execute('CREATE TABLE sessions ('+
+			'userId timeuuid,'+
+			'sessionToken text,'+
+			'PRIMARY KEY (userId, sessionToken)'+
+		');', cdl)
+	
+		client.execute('create index session_tokens on sessions(sessiontoken);', cdl)
+		client.execute('create index user_ids on users(userId);', cdl)
+
+		client.on('log', function(level, message) {
+		  //console.log('log event: %s -- %j', level, message);
+		});
 	})
-	
-	client.execute('CREATE TABLE users ('+
-		'userId timeuuid,'+
-		'email text,'+
-		'createdTime timestamp,'+
-		'passwordChangedTime timestamp,'+
-		'hash text,'+
-		'guest boolean,'+
-		'PRIMARY KEY (email, userId)'+
-	');', cdl)
-	
-	client.execute('CREATE TABLE sessions ('+
-		'userId timeuuid,'+
-		'sessionToken text,'+
-		'PRIMARY KEY (userId, sessionToken)'+
-	');', cdl)
-	
-	client.execute('create index session_tokens on sessions(sessiontoken);', cdl)
-	client.execute('create index user_ids on users(userId);', cdl)
-
-	client.on('log', function(level, message) {
-	  //console.log('log event: %s -- %j', level, message);
-	});
-
 }
 
 function finishMake(c, cb){
@@ -72,7 +73,8 @@ function finishMake(c, cb){
 			var salt = bcrypt.genSaltSync(10);
 			var hash = hashPassword(password, salt)
 			var now = Date.now()
-			
+
+			//dateOf(now())
 			c.execute('insert into users (userId, createdTime, email, passwordChangedTime, hash) VALUES (now(),?,?,?,?)', [now, email, now, hash], 1, function(err, result){
 				if(err){
 					if(errCb) errCb(err)
