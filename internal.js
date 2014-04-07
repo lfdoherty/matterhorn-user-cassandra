@@ -13,6 +13,8 @@ function hashPassword(password, salt){
 
 var log = require('quicklog').make('user-cassandra/internal')
 
+var emailCache = {}
+
 function make(hosts, keyspace, cb){
 
 	_.assertLength(arguments, 3);
@@ -90,30 +92,12 @@ function finishMake(c, cb){
 		//note that 'authentication key' here refers to keys used for lost password retrieval, not sessions
 		//hence we only want 1 to exist at a time, and we need to be able to delete it once it has been used
 		createAuthenticationKey: function(email, cb){
-			/*s.getString(email, 'authenticationKey', function(uid){
-				if(uid !== undefined){
-					s.del(uid, 'authenticationKey');
-					console.log('deleting old authentication key');
-				}
-				
-				var newUid = random.uid();
-				s.setString(newUid, 'authenticationKey', email);
-				s.setString(email, 'authenticationKey', newUid);
-				cb(newUid);
-			});*/
-			
 			_.errout('TODO')
-			//var token = random.uid()
 		},
 		getAuthenticationKeyEmail: function(token, cb){
-			//s.getString(key, 'authenticationKey', cb);
 			_.errout('TODO')
 		},
 		expireAuthenticationKey: function(key){
-			/*s.getString(key, 'authenticationKey', function(email){
-				s.del(email, 'authenticationKey');
-				s.del(key, 'authenticationKey');
-			})	*/
 			_.errout('TODO')		
 		},
 		setEmail: function(id, email){
@@ -125,35 +109,27 @@ function finishMake(c, cb){
 			})
 		},
 		getEmail: function(id, cb){
-			//i.getString(id, 'email', cb);
-			//_.assert(id > 0)
-			/*c.snap('singleUser', [id], function(err, suv){
-				if(err) throw err
-				cb(suv.user.email.value())
-			})*/
 			if(!id) throw new Error('id is not valid: ' + id)
 			
+			if(emailCache[id] !== undefined){
+				process.nextTick(function(){
+					cb(emailCache[id])
+				})
+				return
+			}
 			c.execute('SELECT email FROM users WHERE userId=?', [id], 1,function(err, result){
 				if(err) throw err
 				if(result.rows.length === 0){
 					cb()
 				}else{
 					var email = result.rows[0][0]
+					emailCache[id] = email
 					cb(email)
 				}
 			})
 		},
 		setPassword: function(id, email, password, cb){
 
-			/*var salt = bcrypt.genSaltSync(10);  
-
-			c.snap('singleUser', [id], function(err, suv){
-				if(err) throw err
-				suv.user.hash.set(hashPassword(password, salt))
-				suv.user.passwordChangedTime.set(Date.now())
-				console.log('finished set password')
-				if(cb) cb()
-			})*/
 			var salt = bcrypt.genSaltSync(10);
 			var hash = hashPassword(password, salt)
 			var now = Date.now()
@@ -162,9 +138,6 @@ function finishMake(c, cb){
 			c.execute('UPDATE users SET hash=?, passwordChangedTime=? WHERE email=? and userId=?', [hash, now, email, id], 1, function(err, result){
 				if(err) throw err
 				
-				/*handle.findUser(email, function(userId){
-					cb(userId)
-				})*/
 				if(cb) cb()
 			})			
 		},
@@ -187,26 +160,11 @@ function finishMake(c, cb){
 					//TODO set up fail delay
 				}
 			})
-			/*c.snap('getHash', [id], function(err, v){
-				if(err) throw err
-				var hash = v.hash.value()
-				var passed = bcrypt.compareSync(password, hash);
-				//console.log('hash: ' + hash)
-				//console.log('password: ' + password)
-				//console.log('passed: ' + passed)
-				if(passed){
-					cb(true);
-				}else{
-					cb(false);
-					//TODO set up fail delay
-				}
-			})*/
 		},
 		findUser: function(email, cb){
 
 			if(!email) throw new Error('email undefined')
 			
-			//c.snap('singleUserByEmail', [email], function(err, suv){
 			c.execute('SELECT userId FROM users WHERE email=?', [email], 1,function(err, result){
 				if(err) throw err
 				
@@ -216,43 +174,18 @@ function finishMake(c, cb){
 				}else{
 					cb()
 				}
-				//console.log('json: ' + JSON.stringify(suv.toJson()))
-				/*if(suv.hasProperty('user')){
-					//_.assert(suv.user.id() > 0)
-					cb(suv.user.id())
-				}else{
-					cb()
-				}*/
 			})
 		},
 		
 		makeSession: function(id, cb){
-			
-			//console.log('making session, clearing old sessions...: ' + id)
-			//handle.clearAllUserSessions(id, function(){
-
-				var token = random.uid()
-				c.execute('insert into sessions (userId, sessionToken) VALUES (?,?)', [id, token], 1, function(err, result){
-					if(err) throw err
-				
-					if(cb){
-						cb(token)
-					}
-				})
-			//})
-			/*c.snap('singleUser', [id], function(err, suv){
+			var token = random.uid()
+			c.execute('insert into sessions (userId, sessionToken) VALUES (?,?)', [id, token], 1, function(err, result){
 				if(err) throw err
-				//_.assert(suv.user.id() > 0)
-				var obj = c.make('session', {
-					user: suv.user,
-					token: token
-				}, function(newId){
-					//console.log('made session: ' + newId + ' ' + JSON.stringify(obj.toJson()))
-					if(listeners.login) listeners.login(id, token)
-					
-					if(cb) cb(token, newId)
-				})
-			})*/
+			
+				if(cb){
+					cb(token)
+				}
+			})
 		},
 		checkSession: function(token, cb){
 			if(!_.isString(token)){
@@ -274,27 +207,6 @@ function finishMake(c, cb){
 				}
 			})
 		},
-		/*clearSession: function(token, cb){
-
-			//console.log('clearing user session: ' + token);
-			c.snap('singleSessionByToken', [token], function(err, sv){
-				if(err) throw err
-				if(sv.has('session')){
-					try{
-						var userId = sv.session.user.id()
-						sv.session.del()
-						//if(listeners.logout) listeners.logout(userId, token)
-					}catch(e){
-						console.log(e)
-					}
-					log('session deleted: ' + token)
-					if(cb) cb(true)
-				}else{
-					log('session clear failed, unknown token: ' + token)
-					if(cb) cb(false)
-				}
-			})
-		},*/
 		clearAllUserSessions: function(userId, cb){
 			c.execute('DELETE FROM sessions WHERE userId=?', [userId], 1, function(err, result){
 				if(err) throw err
@@ -319,31 +231,6 @@ function finishMake(c, cb){
 					handle.clearAllUserSessions(userId, cb)
 				}
 			})
-			//console.log('clearing user session---: ' + token);
-			/*c.snap('allSessionsBySameUser', [token], function(err, sv){
-				if(err) throw err
-				//console.log('logging out---')
-				if(sv.has('session')){
-					try{
-						var userId = sv.userId.value()
-						sv.sessions.each(function(session){
-							session.del()
-						})
-						//sv.session.del()
-						if(listeners.logout){
-							//console.log('logging out')
-							listeners.logout(userId)
-						}
-					}catch(e){
-						console.log(e)
-					}
-					log('session deleted: ' + token)
-					if(cb) cb(true)
-				}else{
-					log('session clear failed, unknown token: ' + token)
-					if(cb) cb(false)
-				}
-			})*/
 		}
 	};
 	
