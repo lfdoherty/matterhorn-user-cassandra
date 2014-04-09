@@ -173,7 +173,7 @@ exports.load = function(config, internal,/*app, config.secureApp, host, secureHo
 							res.redirect('../../home/')
 						}
 					});
-				}, true);
+				});
 			}
 		})
 	}

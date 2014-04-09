@@ -5,7 +5,6 @@ var bcrypt = require('bcrypt'),
 	_ = require('underscorem'),
 	sys = require('sys');
 	
-//var minnow = require('minnow')
 function hashPassword(password, salt){
 	var hash = bcrypt.hashSync(password, salt);
 	return hash;
@@ -15,39 +14,50 @@ var log = require('quicklog').make('user-cassandra/internal')
 
 var emailCache = {}
 
+var cql = require('node-cassandra-cql')
+
 function make(hosts, keyspace, cb){
 
 	_.assertLength(arguments, 3);
 	_.assertString(keyspace)
 	_.assertFunction(cb);
 
-	var Client = require('node-cassandra-cql').Client;
-	//var hosts = ['127.0.0.1']
-	var client = new Client({hosts: hosts, keyspace: keyspace})//'matterhorn_user'});
+	var Client = cql.Client;
+	var client = new Client({hosts: hosts, keyspace: keyspace})
 	
 	client.connect(function(){
 		var cdl = _.latch(4, function(){
 			finishMake(client, cb)
 		})
 	
-		client.execute('CREATE TABLE users ('+
+		client.execute('CREATE TABLE users_v2 ('+
 			'userId timeuuid,'+
 			'email text,'+
 			'createdTime timestamp,'+
 			'passwordChangedTime timestamp,'+
 			'hash text,'+
 			'guest boolean,'+
-			'PRIMARY KEY (email, userId)'+
+			'PRIMARY KEY (userId)'+
 		');', cdl)
 	
 		client.execute('CREATE TABLE sessions ('+
 			'userId timeuuid,'+
 			'sessionToken text,'+
-			'PRIMARY KEY (userId, sessionToken)'+
+			'PRIMARY KEY (userId)'+
 		');', cdl)
-	
-		client.execute('create index session_tokens on sessions(sessiontoken);', cdl)
-		client.execute('create index user_ids on users(userId);', cdl)
+		
+		client.execute('CREATE TABLE reverse_sessions_lookup ('+
+			'sessionToken text,'+
+			'userId timeuuid,'+
+			'PRIMARY KEY(sessionToken)'+
+		');', cdl)
+
+		client.execute('CREATE TABLE user_by_email ('+
+			'email text,'+
+			'userId timeuuid,'+
+			'hash text,'+
+			'PRIMARY KEY(email)'+
+		');', cdl)
 
 		client.on('log', function(level, message) {
 		  //console.log('log event: %s -- %j', level, message);
@@ -57,15 +67,25 @@ function make(hosts, keyspace, cb){
 
 function finishMake(c, cb){
 
+
+	function addUserToIndexes(userId, email, hash, cb){
+		c.execute('insert into user_by_email (userId, email,hash) VALUES (?,?,?)', [userId, email,hash], 1, function(err, result){
+			if(err) throw err
+
+			cb()
+		})
+	}
 	var handle = {
 	
 		makeGuest: function(email, cb){
 			var now = Date.now()
+
+			var userId = cql.types.timeuuid()
 			
-			c.execute('insert into users (userId, createdTime, email, passwordChangedTime,guest) VALUES (now(),?,?,?,?)', [now, email, now,true], 1, function(err, result){
+			c.execute('insert into users_v2 (userId, createdTime, email, passwordChangedTime,guest) VALUES (?,?,?,?,?)', [userId, {hint: 'timestamp', value: now}, email, {hint: 'timestamp', value: now},true], 1, function(err, result){
 				if(err) throw err
-				
-				handle.findUser(email, function(userId){
+			
+				addUserToIndexes(userId, email, '', function(){
 					cb(userId)
 				})
 			})
@@ -75,15 +95,18 @@ function finishMake(c, cb){
 			var salt = bcrypt.genSaltSync(10);
 			var hash = hashPassword(password, salt)
 			var now = Date.now()
+			
+			if(errCb) _.assertFunction(errCb)
 
-			//dateOf(now())
-			c.execute('insert into users (userId, createdTime, email, passwordChangedTime, hash) VALUES (now(),?,?,?,?)', [now, email, now, hash], 1, function(err, result){
+			var userId = cql.types.timeuuid()
+			
+			c.execute('insert into users_v2 (userId, createdTime, email, passwordChangedTime, hash) VALUES (?,?,?,?,?)', [userId,{hint: 'timestamp', value: now}, email, {hint: 'timestamp', value: now}, hash], 1, function(err, result){
 				if(err){
 					if(errCb) errCb(err)
 					else throw err
 				}
 				
-				handle.findUser(email, function(userId){
+				addUserToIndexes(userId, email, hash, function(){
 					cb(userId)
 				})
 			})
@@ -117,12 +140,13 @@ function finishMake(c, cb){
 				})
 				return
 			}
-			c.execute('SELECT email FROM users WHERE userId=?', [id], 1,function(err, result){
+			console.log('get-user-email')
+			c.execute('SELECT email FROM users_v2 WHERE userId=?', [id], 1,function(err, result){
 				if(err) throw err
 				if(result.rows.length === 0){
 					cb()
 				}else{
-					var email = result.rows[0][0]
+					var email = result.rows[0].email
 					emailCache[id] = email
 					cb(email)
 				}
@@ -135,7 +159,8 @@ function finishMake(c, cb){
 			var now = Date.now()
 			
 			//c.execute('insert into users (userId, createdTime, email, passwordChangedTime, hash) VALUES (now(),?,?,?,?)', [now, email, now, hash], 1, function(err, result){
-			c.execute('UPDATE users SET hash=?, passwordChangedTime=? WHERE email=? and userId=?', [hash, now, email, id], 1, function(err, result){
+			//console.log('set-user-password')
+			c.execute('UPDATE users_v2 SET hash=?, passwordChangedTime=? WHERE userId=?', [hash, now, id], 1, function(err, result){
 				if(err) throw err
 				
 				if(cb) cb()
@@ -144,10 +169,10 @@ function finishMake(c, cb){
 		authenticate: function(id, password, cb){
 
 			//_.assert(id > 0)
-			c.execute('SELECT hash FROM users WHERE userId=?', [id], 1,function(err, result){
+			c.execute('SELECT hash FROM users_v2 WHERE userId=?', [id], 1,function(err, result){
 				if(err) throw err
 
-				var hash = result.rows[0][0]
+				var hash = result.rows[0].hash
 				
 				var passed = bcrypt.compareSync(password, hash);
 				//console.log('hash: ' + hash)
@@ -164,12 +189,12 @@ function finishMake(c, cb){
 		findUser: function(email, cb){
 
 			if(!email) throw new Error('email undefined')
-			
-			c.execute('SELECT userId FROM users WHERE email=?', [email], 1,function(err, result){
+			console.log('find-user')
+			c.execute('SELECT userId FROM user_by_email WHERE email=?', [email], 1,function(err, result){
 				if(err) throw err
 				
 				if(result.rows.length > 0){
-					var userId = result.rows[0][0]
+					var userId = result.rows[0].userid
 					cb(userId)
 				}else{
 					cb()
@@ -181,10 +206,14 @@ function finishMake(c, cb){
 			var token = random.uid()
 			c.execute('insert into sessions (userId, sessionToken) VALUES (?,?)', [id, token], 1, function(err, result){
 				if(err) throw err
+
+				c.execute('insert into reverse_sessions_lookup (userId, sessionToken) VALUES (?,?)', [id, token], 1, function(err, result){
+					if(err) throw err
 			
-				if(cb){
-					cb(token)
-				}
+					if(cb){
+						cb(token)
+					}
+				})
 			})
 		},
 		checkSession: function(token, cb){
@@ -195,40 +224,44 @@ function finishMake(c, cb){
 			}
 			_.assertString(token);
 
-			c.execute('SELECT userId FROM sessions WHERE sessionToken=?', [token], 1,function(err, result){
+			c.execute('SELECT userId FROM reverse_sessions_lookup WHERE sessionToken=?', [token], 1,function(err, result){
 				if(err) throw err
 				
 				if(result.rows.length > 0){
 					var row = result.rows[0]
-					var userId = row[0]
+					var userId = row.userid
 					cb(true, userId)
 				}else{
 					cb(false)
 				}
 			})
 		},
-		clearAllUserSessions: function(userId, cb){
+		clearAllUserSessions: function(userId, sessionToken, cb){
+				
 			c.execute('DELETE FROM sessions WHERE userId=?', [userId], 1, function(err, result){
 				if(err) throw err
-		
-				console.log('all sessions cleared')
-		
-				if(cb){
-					cb()
-				}
+
+				c.execute('DELETE FROM reverse_sessions_lookup WHERE sessionToken=?', [sessionToken], 1, function(err, result){
+					if(err) throw err
+					console.log('all sessions cleared')
+
+					if(cb){
+						cb()
+					}
+				})
 			})
 		},
 		clearAllSessions: function(token, cb){
 
-			c.execute('SELECT userId FROM sessions WHERE sessionToken=?', [token], 1,function(err, result){
+			c.execute('SELECT userId FROM reverse_sessions_lookup WHERE sessionToken=?', [token], 1,function(err, result){
 				if(err) throw err
 				
 				if(result.rows.length === 0){
 					console.log('WARNING: userId not found for clear: ' + token)
 					if(cb) cb()
 				}else{
-					var userId = result.rows[0][0]
-					handle.clearAllUserSessions(userId, cb)
+					var userId = result.rows[0].userid
+					handle.clearAllUserSessions(userId, token, cb)
 				}
 			})
 		}
