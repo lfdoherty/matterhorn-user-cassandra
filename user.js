@@ -71,6 +71,11 @@ exports.makeClient = function(hosts, keyspace, prefix, cb){
 				cb(false);
 			}else{
 				sid = sid.substr(0, sid.indexOf('|'))
+				if(!sid){
+					console.log('ERROR: no SID in cookie:  ' + req.cookies.SID)
+					cb(false)
+					return
+				}
 				internal.checkSession(sid, function(ok, userId){
 					cb(ok);
 				});

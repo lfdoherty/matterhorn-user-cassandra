@@ -221,8 +221,12 @@ function finishMake(c, cb){
 				console.log('warning in checkSession: token not a string')
 				cb(false)
 				return
+			}else if(token.length === 0){
+				console.log('warning in checkSession: token too short')
+				cb(false)
+				return
 			}
-			_.assertString(token);
+			
 
 			c.execute('SELECT userId FROM reverse_sessions_lookup WHERE sessionToken=?', [token], 1,function(err, result){
 				if(err) throw err
