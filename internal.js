@@ -140,7 +140,7 @@ function finishMake(c, cb){
 				})
 				return
 			}
-			console.log('get-user-email')
+			//console.log('get-user-email')
 			c.execute('SELECT email FROM users_v2 WHERE userId=?', [id], 1,function(err, result){
 				if(err) throw err
 				if(result.rows.length === 0){
