@@ -295,7 +295,7 @@ exports.load = function(config, internal,/*app, config.secureApp, host, secureHo
 		url: '/login',
 		js: './js/simple_login',
 		cb: function(req, res, cb){
-			console.log('cbing: ' + req.query.next);
+			//console.log('cbing: ' + req.query.next);
 			var url = prefix+'/ajax/login'
 			if(req.query.next) url += '?next='+req.query.next
 			cb({after: req.query.next, securePort: config.secureApp.port, PostUrl: url,
