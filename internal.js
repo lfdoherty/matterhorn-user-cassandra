@@ -1,7 +1,7 @@
 "use strict";
 
 var bcrypt = require('bcrypt'),
-	random = require('matterhorn-standard').random,
+	random = require('seedrandom'),
 	_ = require('underscorem'),
 	sys = require('sys');
 	
