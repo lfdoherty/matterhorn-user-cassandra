@@ -206,7 +206,15 @@ exports.load = function(config, internal,/*app, config.secureApp, host, secureHo
 							res.header('Cache-Control', 'no-cache, no-store')
 
 							setSessionCookie(res, token)
-							res.redirect('../../home/')
+							//res.redirect('../../home/')
+							
+							var parsedUrl = urlModule.parse(req.url, true)
+							var next = parsedUrl.query.next
+							if(next){
+								res.redirect(next)
+							}else{
+								res.redirect('../../home/')
+							}
 
 							/*var parsedUrl = urlModule.parse(req.url, true)
 							var next = parsedUrl.query.next
