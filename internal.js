@@ -203,7 +203,7 @@ function finishMake(c, cb){
 		},
 		
 		makeSession: function(id, cb){
-			var token = random.uid()
+			var token = random.uidBase64()
 			c.execute('insert into sessions (userId, sessionToken) VALUES (?,?)', [id, token], 1, function(err, result){
 				if(err) throw err
 

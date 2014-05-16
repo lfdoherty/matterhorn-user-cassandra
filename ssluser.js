@@ -11,7 +11,13 @@ var sys = require('util')
 var random = require('seedrandom')
 
 function setSessionCookie(res, session){
-	res.cookie('SID', session, {httpOnly: true, secure: true, maxAge: 24 * 60 * 60 * 1000});
+	try{
+		res.cookie('SID', session, {httpOnly: true, secure: true, maxAge: 24 * 60 * 60 * 1000});
+	}catch(e){
+		console.log('ERROR: ' + e)
+		console.log('session: ' + session)
+		console.log('res.url: ' + res.url)
+	}
 }
 
 exports.load = function(config, internal,/*app, config.secureApp, host, secureHost, internal, prefix,*/ userMadeCb){

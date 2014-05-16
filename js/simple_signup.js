@@ -1,5 +1,5 @@
 
-var pollsave = require('matterhorn-standard/js/pollsave')
+//var pollsave = require('matterhorn-standard/js/pollsave')
 var u = require('./utils')
 
 var page = require('fpage')
