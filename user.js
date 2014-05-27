@@ -32,6 +32,8 @@ function makeAuthenticate(internal, prefix){
 			var newUrl = 'https://' + req.headers.host + prefix+'/login?next='+protocol+'://' + req.headers.host + req.url
 			//console.log('*redirecting to: ' + newUrl)
 			res.header('Cache-Control', 'no-cache, no-store')
+			res.header('Pragma', 'no-cache')
+			res.header('Expires', '0')
 			res.redirect(newUrl);
 		}
 
