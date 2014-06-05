@@ -189,7 +189,7 @@ function finishMake(c, cb){
 		findUser: function(email, cb){
 
 			if(!email) throw new Error('email undefined')
-			console.log('find-user')
+			//console.log('find-user')
 			c.execute('SELECT userId FROM user_by_email WHERE email=?', [email], 1,function(err, result){
 				if(err) throw err
 				
