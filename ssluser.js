@@ -10,9 +10,13 @@ var sys = require('util')
 
 var random = require('seedrandom')
 
+var OneDay = 24 * 60 * 60 * 1000
+var mainUser = require('./user')
+
 function setSessionCookie(res, session){
 	try{
-		res.cookie('SID', session, {httpOnly: true, secure: true, maxAge: 24 * 60 * 60 * 1000});
+		console.log('session lifespan: ' + SessionLifespan)
+		res.cookie('SID', session, {httpOnly: true, secure: true, maxAge: mainUser.SessionLifespan||OneDay});
 	}catch(e){
 		console.log('ERROR: ' + e)
 		console.log('session: ' + session)
