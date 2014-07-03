@@ -65,6 +65,9 @@ function make(hosts, keyspace, cb){
 	})
 }
 
+var badSessionCache = {}
+var manyBadSessions = 0
+
 function finishMake(c, cb){
 
 
@@ -217,6 +220,12 @@ function finishMake(c, cb){
 			})
 		},
 		checkSession: function(token, cb){
+		
+			if(badSessionCache[token]){
+				cb(false)
+				return
+			}
+			
 			if(!_.isString(token)){
 				console.log('warning in checkSession: token not a string')
 				cb(false)
@@ -231,11 +240,19 @@ function finishMake(c, cb){
 			c.execute('SELECT userId FROM reverse_sessions_lookup WHERE sessionToken=?', [token], 1,function(err, result){
 				if(err) throw err
 				
+				
 				if(result.rows.length > 0){
 					var row = result.rows[0]
 					var userId = row.userid
 					cb(true, userId)
 				}else{
+					//console.log('bad cookie(' + token + ')')
+					if(manyBadSessions > 1000){
+						badSessionCache = {}
+						manyBadSessions = 0
+					}
+					badSessionCache[token] = true
+					++manyBadSessions
 					cb(false)
 				}
 			})
