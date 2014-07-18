@@ -15,7 +15,7 @@ var mainUser = require('./user')
 
 function setSessionCookie(res, session){
 	try{
-		console.log('session lifespan: ' + SessionLifespan)
+		console.log('session lifespan: ' + mainUser.SessionLifespan)
 		res.cookie('SID', session, {httpOnly: true, secure: true, maxAge: mainUser.SessionLifespan||OneDay});
 	}catch(e){
 		console.log('ERROR: ' + e)
