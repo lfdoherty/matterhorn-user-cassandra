@@ -163,7 +163,7 @@ function finishMake(c, cb){
 			
 			//c.execute('insert into users (userId, createdTime, email, passwordChangedTime, hash) VALUES (now(),?,?,?,?)', [now, email, now, hash], 1, function(err, result){
 			//console.log('set-user-password')
-			c.execute('UPDATE users_v2 SET hash=?, passwordChangedTime=? WHERE userId=?', [hash, now, id], 1, function(err, result){
+			c.execute('UPDATE users_v2 SET hash=?, passwordChangedTime=? WHERE userId=?', [{hint: 'text', value: hash}, {hint: 'timestamp', value: now}, {hint: 'uuid', value: id}], 1, function(err, result){
 				if(err) throw err
 				
 				if(cb) cb()
@@ -267,7 +267,7 @@ function finishMake(c, cb){
 					console.log('all sessions cleared')
 
 					if(cb){
-						cb()
+						cb(true)
 					}
 				})
 			})
