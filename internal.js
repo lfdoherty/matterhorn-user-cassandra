@@ -273,6 +273,11 @@ function finishMake(c, cb){
 			})
 		},
 		clearAllSessions: function(token, cb){
+			if(!token){
+				console.log('warning: no token given for clearAllSessions')
+				if(cb) cb()
+				return
+			}
 
 			c.execute('SELECT userId FROM reverse_sessions_lookup WHERE sessionToken=?', [token], 1,function(err, result){
 				if(err) throw err
