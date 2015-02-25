@@ -1,6 +1,6 @@
 {
   "name": "matterhorn-user-cassandra",
-  "version": "0.2.13",
+  "version": "0.2.15",
   "description": "User management for the matterhorn framework, with cassandra as the database.",
   "author": "Liam Doherty",
   "main": "user",
