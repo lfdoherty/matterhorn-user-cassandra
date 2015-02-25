@@ -111,8 +111,8 @@ exports.load = function(config, internal,/*app, config.secureApp, host, secureHo
 					var i = req.url.indexOf('next=')
 					var part = req.url.substr(i+'next='.length)
 					if(part.indexOf('?') === -1){
-						console.log('adding userId to guest next: ' + userId)
-						part += '?userId='+userId
+						console.log('adding userId to guest next: ' + email)
+						part += '?userId='+email
 					}
 					res.redirect(part)
 				}
